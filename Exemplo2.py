@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# Port do algoritmo do Prof Pipa
+# Exemplo utilizado em apresentação no SigPro UTFPR
 
 import numpy as np
 import matplotlib.pyplot as plt

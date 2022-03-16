@@ -1,4 +1,4 @@
-# Laplacianos com diferentes aproximações
+# Laplacianos com diferentes acurácias
 # Felipe Derewlany Gutierrez
 
 import numpy as np

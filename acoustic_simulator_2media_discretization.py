@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
-# Port do algoritmo do Prof Pipa
+# Port do algoritmo do Prof Dr Pipa
+# Utilizado para os testes de dispersão numérica
+# Controlando os parâmetros de discretização diretamente
 
 import numpy as np
 import matplotlib.pyplot as plt

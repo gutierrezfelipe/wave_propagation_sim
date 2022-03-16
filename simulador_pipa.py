@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# Port do algoritmo do Prof Pipa
+# Port do algoritmo do Prof Dr Pipa
 
 import numpy as np
 import matplotlib.pyplot as plt
