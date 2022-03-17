@@ -10,7 +10,7 @@ from scipy.ndimage.filters import correlate
 import time
 import math
 import pyqtgraph as pg
-from pyqtgraph.widgets.RawImageWidget import RawImageGLWidget
+from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
 
 def speed_measuring(z1, z2, pressure_at_z1, pressure_at_z2, dh, medium_speed, mode=0):
@@ -163,7 +163,7 @@ sfmt.setSwapInterval(0)
 pg.QtGui.QSurfaceFormat.setDefaultFormat(sfmt)
 
 app = pg.QtGui.QApplication([])
-riw = pg.widgets.RawImageWidget.RawImageGLWidget()
+riw = pg.widgets.RawImageWidget.RawImageWidget()
 riw.show()
 
 start_time = time.time()
@@ -183,8 +183,8 @@ for k in range(4, Nt):
         lap = signal.fftconvolve(u_1[:, :], coeff, mode='same')
 
 
-    u = (2 * u_1[:, :] - (1 - delta / 2) * u_2[:, :] + (c[:, :] ** 2) * lap) / (1 + delta / 2)
-    #u = 2 * u_1[:, :] - u_2[:, :] + (c[:, :] ** 2) * lap
+    #u = (2 * u_1[:, :] - (1 - delta / 2) * u_2[:, :] + (c[:, :] ** 2) * lap) / (1 + delta / 2)
+    u = 2 * u_1[:, :] - u_2[:, :] + (c[:, :] ** 2) * lap
 
     u[z_f, x_f] += f[k]
 

@@ -8,7 +8,7 @@ from scipy.ndimage.filters import correlate
 import time
 import math
 import pyqtgraph as pg
-from pyqtgraph.widgets.RawImageWidget import RawImageGLWidget
+from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
 
 def speed_measuring(y1, y2, pressure_at_y1, pressure_at_y2, dh, medium_speed, mode=0):
@@ -250,7 +250,7 @@ sfmt.setSwapInterval(0)
 pg.QtGui.QSurfaceFormat.setDefaultFormat(sfmt)
 
 app = pg.QtGui.QApplication([])
-riw = pg.widgets.RawImageWidget.RawImageGLWidget()
+riw = pg.widgets.RawImageWidget.RawImageWidget()
 riw.show()
 
 start_time = time.time()

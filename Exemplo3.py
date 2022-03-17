@@ -8,7 +8,7 @@ from scipy.ndimage.filters import correlate
 import time
 import math
 import pyqtgraph as pg
-from pyqtgraph.widgets.RawImageWidget import RawImageGLWidget
+from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
 
 def speed_measuring(z1, z2, pressure_at_z1, pressure_at_z2, dh, medium_speed, mode=0):
@@ -80,7 +80,7 @@ soundspeed2 = 5800  # [m/s]
 #soundspeed = 6000  # [m/s]
 
 # Pontos por comprimento de onda
-S = 8
+S = 4
 dx = soundspeed1/((2 * frequency)*S)  # [m/pixel]
 dz = dx
 
@@ -162,7 +162,7 @@ sfmt.setSwapInterval(0)
 pg.QtGui.QSurfaceFormat.setDefaultFormat(sfmt)
 
 app = pg.QtGui.QApplication([])
-riw = pg.widgets.RawImageWidget.RawImageGLWidget()
+riw = pg.widgets.RawImageWidget.RawImageWidget()
 riw.show()
 
 start_time = time.time()

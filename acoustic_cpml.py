@@ -78,7 +78,7 @@ class Window(QMainWindow):
 
 
 # Simulation Parameters
-T = 0.000008  # [s]
+T = 0.000004  # [s]
 Lx = 0.01  # [m]
 Lz = 0.01  # [m]
 dt = 5e-9  # [s/iteration]
@@ -114,17 +114,16 @@ u_2 = np.zeros((Nz, Nx))
 # Signal acquisitors
 u_at_transducer = np.zeros(Nt)
 
-# Sources
-z_f = round(Nz * 0.2)  # Transductor z coordinate
+# Source config
+z_f = round(Nz / 2)  # Transductor z coordinate
 x_f = round(Nx / 2)  # Transcuctor x coordinate
 t = np.linspace(0, T - dt, Nt)  # Time array
 frequency = 2e6  # [Hz]
 delay = 1e-6
 bandwidth = 0.6
-
 f = signal.gausspulse(t - delay, frequency, bandwidth)
 
-# Laplacian Kernels Stencil Calculation - Prof. Pipa
+# Laplacian Kernels Stencil Calculation - Prof. Dr. Pipa
 deriv_order = 2
 deriv_accuracy = 2
 deriv_n_coef = 2 * np.floor((deriv_order + 1) / 2).astype('int') - 1 + deriv_accuracy
@@ -147,22 +146,23 @@ window = Window()
 # Start timer for simulation
 start_time = time.time()
 
-for k in range(4, Nt):
+for k in range(3, Nt):
     iteration_start = time.time()
 
     u_0 = u
     u_2 = u_1
     u_1 = u_0
 
-    """
+
     lap = signal.correlate(u_1[:, :], coeff, mode='same')
     u = 2 * u_1[:, :] - u_2[:, :] + (c ** 2) * lap
-    """
 
+    """
     for j in range(CPML_size, Nz-CPML_size):
         for i in range(CPML_size, Nx-CPML_size):
             lap = u_1[j, i+1] + u_1[j+1, i] - 4 * u_1[j, i] + u_1[j-1, i] + u_1[j, i-1]
             u[j, i] = 2 * u_1[j, i] - u_2[j, i] + (c ** 2) * lap
+    """
 
     u[z_f, x_f] += f[k]
 

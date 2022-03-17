@@ -4,11 +4,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
-from scipy.ndimage.filters import correlate
+from scipy.ndimage import correlate
 import time
 import math
 import pyqtgraph as pg
-from pyqtgraph.widgets.RawImageWidget import RawImageGLWidget
+from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
 
 def speed_measuring(z1, z2, pressure_at_z1, pressure_at_z2, dh, medium_speed, mode=0):
@@ -153,7 +153,7 @@ sfmt.setSwapInterval(0)
 pg.QtGui.QSurfaceFormat.setDefaultFormat(sfmt)
 
 app = pg.QtGui.QApplication([])
-riw = pg.widgets.RawImageWidget.RawImageGLWidget()
+riw = pg.widgets.RawImageWidget.RawImageWidget()
 riw.show()
 
 start_time = time.time()
@@ -219,6 +219,7 @@ print(f"Lap {deriv_accuracy} - Measured Wave Speed: {np.mean(measured_speed1_ms)
 print(f"\n\nTotal Time: {total_time} s")
 print(f"Total Time: {total_time / 60} min")
 
+"""
 plt.ioff()
 plt.figure(1)
 plt.plot(t, f, 'b', label='Fonte')
@@ -275,3 +276,4 @@ plt.ylabel('Amplitude do sinal')
 plt.title(f"Medição da velocidade")
 plt.legend()
 plt.show()
+"""
