@@ -8,12 +8,15 @@ from PyQt5.QtWidgets import *
 import sys
 import numpy as np
 from scipy import signal
+import laplaciano
 import time
 import math
+import matplotlib.pyplot as plt
 import pyqtgraph as pg
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+import copy
 
 
 # Image View class
@@ -78,7 +81,7 @@ class Window(QMainWindow):
 
 
 # Simulation Parameters
-T = 0.000004  # [s]
+T = 0.000003  # [s]
 Lx = 0.01  # [m]
 Lz = 0.01  # [m]
 dt = 5e-9  # [s/iteration]
@@ -110,6 +113,12 @@ print(f"CFL condition = {CFL}")
 u = np.zeros((Nz, Nx))
 u_1 = np.zeros((Nz, Nx))
 u_2 = np.zeros((Nz, Nx))
+
+#uu = u[CPML_size:Nz-CPML_size, CPML_size: Nx-CPML_size].view()
+#uu_1 = u_1[CPML_size:Nz-CPML_size, CPML_size: Nx-CPML_size].view()
+#uu_2 = u_2[CPML_size:Nz-CPML_size, CPML_size: Nx-CPML_size].view()
+
+mask = np.full((Nz, Nx), True)
 
 # Signal acquisitors
 u_at_transducer = np.zeros(Nt)
@@ -146,16 +155,30 @@ window = Window()
 # Start timer for simulation
 start_time = time.time()
 
+
+
 for k in range(3, Nt):
     iteration_start = time.time()
 
-    u_0 = u
-    u_2 = u_1
-    u_1 = u_0
+    #u_2 = u_1
+    u_1, u_2 = u.copy(), u_1.copy()
+    #uu_1, uu_2 = uu, uu_1
 
 
-    lap = signal.correlate(u_1[:, :], coeff, mode='same')
-    u = 2 * u_1[:, :] - u_2[:, :] + (c ** 2) * lap
+    #lap = signal.correlate(u_1[CPML_size:Nz-CPML_size, CPML_size:Nx-CPML_size], coeff, mode='same')
+    #u[CPML_size:Nz-CPML_size, CPML_size:Nx-CPML_size] = 2 * u_1[CPML_size:Nz-CPML_size, CPML_size:Nx-CPML_size] - u_2[CPML_size:Nz-CPML_size, CPML_size:Nx-CPML_size] + (c ** 2) * lap
+
+    lap = signal.correlate(u_1, coeff, mode='same')
+    #lap = laplaciano.fdm_laplaciano(u_1, 2)
+    #u = np.zeros_like(u)
+    u[:, :] = (2 * u_1[mask] - u_2[mask] + (c ** 2) * lap[mask]).reshape((Nz, Nx))
+    temp = (2 * u_1[mask] - u_2[mask] + (c ** 2) * lap[mask]).reshape((Nz, Nx))
+    #plt.imshow(u-temp)
+    #plt.show()
+
+    #print(u.shape)
+    #np.copyto(u, 2 * u_1 - u_2 + (c ** 2) * lap)
+    #uu = 2 * uu_1 - uu_2 + (c ** 2) * lap
 
     """
     for j in range(CPML_size, Nz-CPML_size):
@@ -164,7 +187,7 @@ for k in range(3, Nt):
             u[j, i] = 2 * u_1[j, i] - u_2[j, i] + (c ** 2) * lap
     """
 
-    u[z_f, x_f] += f[k]
+    u[z_f, x_f] = f[k] + u[z_f, x_f]
 
     # Signal Acquisition
     u_at_transducer[k] = u[z_f, x_f]
@@ -172,6 +195,7 @@ for k in range(3, Nt):
     # Tracking
     math_time = time.time()
     print(f"{k} / {Nt} - Math Time: {math_time - iteration_start} s")
+    #print(np.shares_memory(u, uu))
 
     # Exhibition Update - QT
     window.imv.setImage(u.T, levels=[-0.1, 0.1])
@@ -185,4 +209,5 @@ total_time = end_time - start_time
 
 print(f"\n\nTotal Time: {total_time} s")
 print(f"Total Time: {total_time / 60} min")
+
 
