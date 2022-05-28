@@ -46,6 +46,7 @@ class Window(QMainWindow):
 
         # setting geometry
         self.setGeometry(200, 50, 1600, 800)
+        #200, 50, 800, 800
 
         # setting animation
         self.isAnimated()
@@ -92,10 +93,10 @@ dh = dz  # [m/pixel]
 Nt = math.ceil(T / dt)
 
 
-# Convolutional Perfectly Matched Layers size
-CPML_size = 20
-Nx = math.ceil(Lx / dx) + 2 * CPML_size
-Nz = math.ceil(Lz / dz) + 2 * CPML_size
+# Perfectly Matched Layers size
+PML_size = 20
+Nx = math.ceil(Lx / dx) + 2 * PML_size
+Nz = math.ceil(Lz / dz) + 2 * PML_size
 
 ad = math.sqrt((dx * dz) / (dt ** 2))  # Adimensionality constant
 
@@ -115,13 +116,20 @@ print(f"CFL condition = {CFL}")
 # Pressure Fields
 px = np.zeros((Nz, Nx))
 px_1 = np.zeros((Nz, Nx))
+px_2 = np.zeros((Nz, Nx))
 pz = np.zeros((Nz, Nx))
 pz_1 = np.zeros((Nz, Nx))
+pz_2 = np.zeros((Nz, Nx))
+u_accuracy_1 = np.zeros((Nz, Nx))
+u_accuracy_2 = np.zeros((Nz, Nx))
+aux = np.zeros((Nz, Nx))
 
 Ax = np.zeros((Nz, Nx))
 Ax_1 = np.zeros((Nz, Nx))
+Ax_2 = np.zeros((Nz, Nx))
 Az = np.zeros((Nz, Nx))
 Az_1 = np.zeros((Nz, Nx))
+Az_2 = np.zeros((Nz, Nx))
 
 v = np.zeros((Nz, Nx))
 v_1 = np. zeros((Nz, Nx))
@@ -153,26 +161,26 @@ coeff[deriv_n_coef // 2, :] = np.linalg.solve(A, b)
 coeff += coeff.T
 
 # PML parameters
-Li = CPML_size * dh
+Li = PML_size * dh
 R = 0.0000001
 Vmax = 2500
 #d0 = -3 / (2 * Li) * math.log(R, 10)
 
-ones = np.ones((CPML_size, Nx))
+ones = np.ones((PML_size, Nx))
 
-fade = np.linspace(0, Li, CPML_size)
+fade = np.linspace(0, Li, PML_size)
 f_i_bottom = np.outer(fade, ones)
 f_i_right = f_i_bottom.T
 
-fade = np.linspace(Li, 0, CPML_size)
+fade = np.linspace(Li, 0, PML_size)
 f_i_top = np.outer(fade, ones)
 f_i_left = f_i_top.T
 
 f_i = np.zeros((Nz, Nx))
-f_i[0:CPML_size, :] += f_i_top[:, :Nx]
-f_i[Nz-CPML_size:Nz, :] += f_i_bottom[:, :Nx]
-f_i[:, 0:CPML_size] += f_i_left[:Nz, :]
-f_i[:, Nx-CPML_size:Nx] += f_i_right[:Nz, :]
+f_i[0:PML_size, :] += f_i_top[:, :Nx]
+f_i[Nz-PML_size:Nz, :] += f_i_bottom[:, :Nx]
+f_i[:, 0:PML_size] += f_i_left[:Nz, :]
+f_i[:, Nx-PML_size:Nx] += f_i_right[:Nz, :]
 
 d_x = np.zeros((Nz, Nx))
 d_z = np.zeros((Nz, Nx))
@@ -191,14 +199,21 @@ start_time = time.time()
 for k in range(3, Nt):
     iteration_start = time.time()
 
-    px_1 = px
-    pz_1 = pz
+    px_1, px_2 = px.copy(), px_1.copy()
+    pz_1, pz_2 = pz.copy(), pz_1.copy()
+    #pz_1 = pz
 
-    Ax_1 = Ax
-    Az_1 = Az
+    Ax_1, Ax_2 = Ax.copy(), Ax_1.copy()
+    Az_1, Az_2 = Az.copy(), Az_1.copy()
+    #Az_1 = Az
 
     v_1, v_2 = v.copy(), v_1.copy()
 
+    ## PV acoustic wave equation formulation
+
+    '''
+    # Derivada Temporal: Forward Acurácia 1
+    # Derivada Espacial: Forward Acurácia 1
     px[:, 1:] = px_1[:, 1:] - d_x[:, 1:] * px_1[:, 1:] * dt + c**2 *dt/(dx) * (Ax[:, 1:] - Ax[:, :-1])
     pz[:-1, :] = pz_1[:-1, :] - d_z[:-1, :] * pz_1[:-1, :] * dt + c**2 *dt/(dz) * (Az[1:, :] - Az[:-1, :])
 
@@ -211,22 +226,95 @@ for k in range(3, Nt):
     px[z_f, x_f] = f[k] + px[z_f, x_f]
     pz[z_f, x_f] = f[k] + pz[z_f, x_f]
 
-    p = px + pz
+    u_accuracy_1 = px + pz
+    
+    # Derivada Temporal: Forward Acurácia 1
+    # Derivada Espacial: Central Acurácia 1
+    px[:, 2:] = px_1[:, 2:] - d_x[:, 2:] * px_1[:, 2:] * dt + c ** 2 * dt / (2 * dx) * (Ax[:, 2:] - Ax[:, :-2])
+    pz[:-2, :] = pz_1[:-2, :] - d_z[:-2, :] * pz_1[:-2, :] * dt + c ** 2 * dt / (2 * dz) * (Az[2:, :] - Az[:-2, :])
 
+    Ax[:, :-2] = Ax_1[:, :-2] - d_x[:, :-2] * Ax_1[:, :-2] * dt + \
+                 dt / (2 *dx) * (px[:, 2:] - px[:, :-2] + pz[:, 2:] - pz[:, :-2])
+
+    Az[2:, :] = Az_1[2:, :] - d_z[2:, :] * Az_1[2:, :] * dt + \
+                dt / (2 * dz) * (px[2:, :] - px[:-2, :] + pz[2:, :] - pz[:-2, :])
+
+    px[z_f, x_f] = f[k] + px[z_f, x_f]
+    pz[z_f, x_f] = f[k] + pz[z_f, x_f]
+
+    u_accuracy_1_c = px + pz
+    '''
+
+    # Derivada Temporal: forward accuracy 1
+    # Derivada Espacial: central accuracy 2
+    aux[:, 2:] = 9/8 * Ax[:, :-2] - 9/8 * Ax[:, 2:]
+    aux[:, 1:] += 1/24 * Ax[:, 1:] - 1/24 * Ax[:, :-1]
+
+    px[:, 2:] = px_1[:, 2:] - d_x[:, 2:] * px_1[:, 2:] * dt + c ** 2 * dt / (12 * dx) * aux[:, 2:]
+
+    aux[:-2, :] = 9/8 * Az[:-2, :] - 9/8 * Az[2:, :]
+    aux[:-1, :] += 1/24 * Az[1:, :] - 1/24 * Az[:-1, :]
+
+    pz[:-2, :] = pz_1[:-2, :] - d_z[:-2, :] * pz_1[:-2, :] * dt + c ** 2 * dt / (12 * dz) * aux[:-2, :]
+
+    aux[:, :-2] = px[:, :-2] - px[:, 2:] + pz[:, :-2] - pz[:, 2:]
+    aux[:, :-1] += 8 * px[:, 1:] - 8 * px[:, :-1] + 8 * pz[:, 1:] - 8 * pz[:, :-1]
+
+    Ax[:, :-2] = Ax_1[:, :-2] - d_x[:, :-2] * Ax_1[:, :-2] * dt + \
+                 dt / (12 * dx) * aux[:, :-2]
+
+    aux[2:, :] = px[:-2, :] - px[2:, :] + pz[:-2, :] - pz[2:, :]
+    aux[1:, :] += 8 * px[1:, :] - 8 * px[:-1, :] + 8 * pz[1:, :] - 8 * pz[:-1, :]
+
+    Az[2:, :] = Az_1[2:, :] - d_z[2:, :] * Az_1[2:, :] * dt + \
+                dt / (12 * dz) * aux[2:, :]
+
+    px[z_f, x_f] = f[k] + px[z_f, x_f]
+    pz[z_f, x_f] = f[k] + pz[z_f, x_f]
+
+    u_accuracy_12 = px + pz
+
+    '''
+    # Derivada Temporal: Forward Acurácia 2
+    # Derivada ESpacial: Central Acurácia 2
+    aux[:, 2:] = Ax[:, :-2] - Ax[:, 2:]
+    aux[:, 1:] += 8 * Ax[:, 1:] - 8 * Ax[:, :-1]
+
+    px[:, 2:] = 4 * px_1[:, 2:] + (2 * d_x[:, 2:] * dt - 3) * px_2[:, 2:] - \
+                2 * dt * c ** 2 / (12 * dx) * aux[:, 2:]
+
+    aux[:-2, :] = Az[:-2, :] - Az[2:, :]
+    aux[:-1, :] += 8 * Az[1:, :] - 8 * Az[:-1, :]
+
+    pz[:-2, :] = 4 * pz_1[:-2, :] + (2 * d_z[:-2, :] * dt - 3) * pz_2[:-2, :] - \
+                 2 * dt * c ** 2 / (12 * dz) * aux[:-2, :]
+
+    aux[:, :-2] = px[:, :-2] - px[:, 2:] + pz[:, :-2] - pz[:, 2:]
+    aux[:, :-1] += 8 * px[:, 1:] - 8 * px[:, :-1] + 8 * pz[:, 1:] - 8 * pz[:, :-1]
+
+    Ax[:, :-2] = 4 * Ax_1[:, :-2] + (2 * d_x[:, :-2] * dt - 3) * Ax_2[:, :-2] - \
+                2 * dt / (12 * dx) * aux[:, :-2]
+
+    aux[2:, :] = px[:-2, :] - px[2:, :] + pz[:-2, :] - pz[2:, :]
+    aux[1:, :] += 8 * px[1:, :] - 8 * px[:-1, :] + 8 * pz[1:, :] - 8 * pz[:-1, :]
+
+    Az[2:, :] = 4 * Az_1[2:, :] + (2 * d_z[2:, :] * dt - 3) * Az_2[2:, :] - \
+                2 * dt / (12 * dz) * aux[2:, :]
+
+    px[z_f, x_f] = f[k] + px[z_f, x_f]
+    pz[z_f, x_f] = f[k] + pz[z_f, x_f]
+
+    u_accuracy_2 = px + pz
+    '''
+
+    # without pml
     lap = laplaciano.fdm_laplaciano(v_1, 2)
     v = 2 * v_1 - v_2 + C2 * lap
-
-    #plt.imshow(u-temp)
-    #plt.show()
-    #print(u.shape)
-    #np.copyto(u, 2 * u_1 - u_2 + (c ** 2) * lap)
-    #uu = 2 * uu_1 - uu_2 + (c ** 2) * lap
-
 
     v[z_f, x_f] = f[k] + v[z_f, x_f]
 
     # Signal Acquisition
-    u_at_transducer[k] = p[z_f, x_f]
+    u_at_transducer[k] = u_accuracy_1[z_f, x_f]
 
     # Tracking
     math_time = time.time()
@@ -234,8 +322,8 @@ for k in range(3, Nt):
     #print(np.shares_memory(u, uu))
 
     # Exhibition Update - QT
-    x = np.concatenate((p, v), 1)
-    #window.imv.setImage(p.T, levels=[-0.1, 0.1])
+    x = np.concatenate((u_accuracy_12, v), 1)
+    #window.imv.setImage(u_accuracy_1.T, levels=[-0.1, 0.1])
     window.imv.setImage(x.T, levels=[-0.1, 0.1])
     App.processEvents()
 

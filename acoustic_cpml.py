@@ -206,9 +206,9 @@ zetaz = np.zeros((Nz, Nx))
 zetax_1 = np.zeros((Nz, Nx))
 zetaz_1 = np.zeros((Nz, Nx))
 
-zetax[:, 1:-1] = ai[:, 1:-1] * zetai0[:, 1:-1] + bi[:, 1:-1] * \
+zetax[:, 2:] = ai[:, 1:-1] * zetai0[:, 1:-1] + bi[:, 1:-1] * \
                  ((u_1[:, 0:-2] - 2 * u_1[:, 1:-1] + u_1[:, 2:]) + (psix[:, 2:] - psix[:, 0:-2])/2)
-zetaz[1:-1, :] = ai[1:-1, :] * zetai0[1:-1, :] + bi[1:-1, :] * \
+zetaz[:-2, :] = ai[1:-1, :] * zetai0[1:-1, :] + bi[1:-1, :] * \
                  ((u_1[0:-2, :] - 2 * u_1[1:-1, :] + u_1[2:, :]) + (psiz[2:, :] - psiz[0:-2, :])/2)
 
 # Exhiibition Setup
@@ -230,14 +230,14 @@ for k in range(3, Nt):
 
     psix_1 = psix
     psiz_1 = psiz
-    psix[:, 1:-1] = ai[:, 1:-1] * psix_1[:, 1:-1] + (u_1[:, 2:] - u_1[:, 0:-2]) / 2
-    psiz[1:-1, :] = ai[1:-1, :] * psiz_1[1:-1, :] + (u_1[2:, :] - u_1[0:-2, :]) / 2
+    psix[:, 2:] = ai[:, :-2] * psix_1[:, :-2] + (u_1[:, 2:] - u_1[:, 0:-2]) / 2
+    psiz[:-2, :] = ai[2:, :] * psiz_1[2:, :] + (u_1[2:, :] - u_1[0:-2, :]) / 2
 
     zetax_1 = zetax
     zetaz_1 = zetaz
-    zetax[:, 1:-1] = ai[:, 1:-1] * zetax_1[:, 1:-1] + bi[:, 1:-1] * \
+    zetax[:, :-2] = ai[:, 1:-1] * zetax_1[:, 1:-1] + bi[:, 1:-1] * \
                      ((u_1[:, 0:-2] - 2 * u_1[:, 1:-1] + u_1[:, 2:]) + (psix[:, 2:] - psix[:, 0:-2]) / 2)
-    zetaz[1:-1, :] = ai[1:-1, :] * zetaz_1[1:-1, :] + bi[1:-1, :] * \
+    zetaz[:-2, :] = ai[1:-1, :] * zetaz_1[1:-1, :] + bi[1:-1, :] * \
                      ((u_1[0:-2, :] - 2 * u_1[1:-1, :] + u_1[2:, :]) + (psiz[2:, :] - psiz[0:-2, :]) / 2)
 
     #lap = signal.correlate(u_1[CPML_size:Nz-CPML_size, CPML_size:Nx-CPML_size], coeff, mode='same')
@@ -250,7 +250,7 @@ for k in range(3, Nt):
     #temp = (2 * u_1[mask] - u_2[mask] + (c ** 2) * lap[mask]).reshape((Nz, Nx))
 
     psi[:, :-1] = psix[:, 1:] - psix[:, :-1]
-    psi[:-1, :] += psiz[1:, :] - psiz[:-1, :]
+    psi[1:, :] += psiz[1:, :] - psiz[:-1, :]
 
     zeta = zetax + zetaz
 
