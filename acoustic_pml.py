@@ -211,7 +211,7 @@ for k in range(3, Nt):
 
     ## PV acoustic wave equation formulation
 
-    '''
+
     # Derivada Temporal: Forward Acurácia 1
     # Derivada Espacial: Forward Acurácia 1
     px[:, 1:] = px_1[:, 1:] - d_x[:, 1:] * px_1[:, 1:] * dt + c**2 *dt/(dx) * (Ax[:, 1:] - Ax[:, :-1])
@@ -227,7 +227,8 @@ for k in range(3, Nt):
     pz[z_f, x_f] = f[k] + pz[z_f, x_f]
 
     u_accuracy_1 = px + pz
-    
+    #u_accuracy_1[z_f, x_f] += f[k]
+    '''
     # Derivada Temporal: Forward Acurácia 1
     # Derivada Espacial: Central Acurácia 1
     px[:, 2:] = px_1[:, 2:] - d_x[:, 2:] * px_1[:, 2:] * dt + c ** 2 * dt / (2 * dx) * (Ax[:, 2:] - Ax[:, :-2])
@@ -244,7 +245,7 @@ for k in range(3, Nt):
 
     u_accuracy_1_c = px + pz
     '''
-
+    '''
     # Derivada Temporal: forward accuracy 1
     # Derivada Espacial: central accuracy 2
     aux[:, 2:] = 9/8 * Ax[:, :-2] - 9/8 * Ax[:, 2:]
@@ -273,6 +274,7 @@ for k in range(3, Nt):
     pz[z_f, x_f] = f[k] + pz[z_f, x_f]
 
     u_accuracy_12 = px + pz
+    '''
 
     '''
     # Derivada Temporal: Forward Acurácia 2
@@ -322,7 +324,7 @@ for k in range(3, Nt):
     #print(np.shares_memory(u, uu))
 
     # Exhibition Update - QT
-    x = np.concatenate((u_accuracy_12, v), 1)
+    x = np.concatenate((u_accuracy_1, v), 1)
     #window.imv.setImage(u_accuracy_1.T, levels=[-0.1, 0.1])
     window.imv.setImage(x.T, levels=[-0.1, 0.1])
     App.processEvents()
