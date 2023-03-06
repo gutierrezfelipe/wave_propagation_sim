@@ -33,25 +33,6 @@ Nx = round(Lx / Dx)
 Nz = round(Lz / Dz)
 Nt = round(Lt / Dt)
 
-# c = 5490
-# c = 1480
-c = 5490 * np.ones((Nz, Nx))
-
-radius = 0.030/2/Dx  # 30mm diameter circle
-z_center = Nz//2
-x_center = Nx//2
-
-for j in range(Nz):
-    for i in range(Nx):
-        if (i - x_center)**2 + (j - z_center)**2 < radius**2:
-            c[j, i] = 2760
-
-
-z_f = 5
-x_f = Nx // 2
-p_recording = np.zeros(Nt)
-pv_recording = np.zeros(Nt)
-
 sfmt = pg.QtGui.QSurfaceFormat()
 sfmt.setSwapInterval(0)
 pg.QtGui.QSurfaceFormat.setDefaultFormat(sfmt)
@@ -102,6 +83,17 @@ def coeff2ndOrder(N):
 
 c2ndOrd = coeff2ndOrder(2*accuracy)
 
+print(c1stOrd)
+print(c2ndOrd)
+
+
+c = 5490 * np.ones((Nz, Nx))
+# c = 1480
+
+c[:accuracy, :] = 0
+c[:, :accuracy] = 0
+c[:, Nx-accuracy:] = 0
+c[Nz-accuracy:, :] = 0
 
 px = np.zeros((Nz, Nx), dtype=dtype)
 px_1 = np.zeros((Nz, Nx), dtype=dtype)
@@ -116,38 +108,53 @@ p = np.zeros((Nz, Nx), dtype=dtype)
 p_1 = np.zeros((Nz, Nx), dtype=dtype)
 p_2 = np.zeros((Nz, Nx), dtype=dtype)
 
+p_rec = np.zeros(Nt)
+pv_rec = np.zeros(Nt)
+
+z_s = round(Nz * 0.85)
+x_s = round(Nx * 0.5)
+
 for k in range(1, Nt):
     px_1, pz_1, Ax_1, Az_1 = px, pz, Ax, Az
 
-    px = px_1 - c ** 2 * (Dt / Dx) * correlate(Ax_1, c1stOrd, mode='constant')
-    pz = pz_1 - c ** 2 * (Dt / Dx) * correlate(Az_1, c1stOrd.T, mode='constant')
-    px[z_f, x_f] += s[k]/2
-    pz[z_f, x_f] += s[k]/2
+    px = px_1 - c[:, :] ** 2 * (Dt / Dx) * correlate(Ax_1, c1stOrd, mode='constant')
+    pz = pz_1 - c[:, :] ** 2 * (Dt / Dx) * correlate(Az_1, c1stOrd.T, mode='constant')
+    px[Nz//2, Nx//2] = s[k]/2
+    pz[Nz//2, Nx//2] = s[k]/2
     Ax = Ax_1 - (Dt / Dx) * correlate(px + pz, c1stOrd, mode='constant', origin=[0, -1])
     Az = Az_1 - (Dt / Dx) * correlate(px + pz, c1stOrd.T, mode='constant', origin=[-1, 0])
-    pv_recording[k] = px[Nz // 2, Nx // 2] + pz[Nz // 2, Nx // 2]
+
+    pv_rec[k] = px[z_s, x_s] + pz[z_s, x_s]
 
     p_1, p_2 = p, p_1
-    p = 2*p_1 - p_2 + (Dt*c/Dx)**2 * correlate(p_1, c2ndOrd, mode='constant')
-    p[z_f, x_f] += s[k]
-    p_recording[k] = p[Nz // 2, Nx // 2]
+    p = 2*p_1 - p_2 + (Dt*c[:, :]/Dx)**2 * correlate(p_1, c2ndOrd, mode='constant')
+    p[Nz // 2, Nx // 2] = s[k]
+
+    p_rec[k] = p[z_s, x_s]
 
     riw.setImage(np.vstack((p.T, (px + pz).T)), levels=[-.1, .1])
     app.processEvents()  ## force complete redraw for every plot
     plt.pause(1e-12)
 
-app.quit()
+#app.quit()
 
 plt.figure()
-plt.plot(p[Nz//2, :], label='pressure')
-plt.plot(px[Nz//2, :]+pz[Nz//2, :], label='pressure velocity')
-plt.legend()
-
-plt.figure()
-plt.plot(t, p_recording, label='pressure')
-plt.plot(t, pv_recording, label='pressure velocity')
+plt.title("Sinais no tempo normalizados")
+plt.plot(p[Nz//2, :]/np.linalg.norm(p[Nz // 2, :]), label='P')
+plt.plot((px[Nz//2, :]+pz[Nz//2, :])/np.linalg.norm(px[Nz//2, :]+pz[Nz//2, :]), label='PV')
 plt.legend()
 
 
+plt.figure()
+plt.title("Linha do meio")
+plt.plot(t, p_rec/np.linalg.norm(p_rec), label='P_rec')
+plt.plot(t, pv_rec/np.linalg.norm(pv_rec), label='PV_rec')
+plt.legend()
+# plt.show()
+
+plt.figure()
+plt.title("Resídio")
+plt.plot(t, (p_rec-pv_rec), label='resídio')
+plt.legend()
 plt.show()
 

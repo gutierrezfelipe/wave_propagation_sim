@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 # Desenvolvimento do simulador de onda acústica com PML
-# Utilizando CPML
 # Felipe Derewlany Gutierrez
 
 

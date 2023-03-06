@@ -142,7 +142,7 @@ f = signal.gausspulse(t - delay, frequency, bandwidth)
 
 # Laplacian Kernels Stencil Calculation - Prof. Dr. Pipa
 deriv_order = 2
-deriv_accuracy = 2
+deriv_accuracy = 4
 deriv_n_coef = 2 * np.floor((deriv_order + 1) / 2).astype('int') - 1 + deriv_accuracy
 p = np.round((deriv_n_coef - 1) / 2).astype('int')
 A = np.arange(-p, p + 1) ** np.arange(0, 2 * p + 1)[None].T

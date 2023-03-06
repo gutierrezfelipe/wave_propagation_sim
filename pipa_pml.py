@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import pyqtgraph as pg
 from pyqtgraph.widgets.RawImageWidget import RawImageGLWidget
 from scipy.ndimage import correlate
+import math
 
 dtype = 'float32'  # float32 is the fastest
 
@@ -34,6 +35,8 @@ Nt = round(Lt / Dt)
 
 c = 5490
 c = 1480
+
+C2 = c ** 2 * Dt ** 2 / (Dx ** 2)
 
 sfmt = pg.QtGui.QSurfaceFormat()
 sfmt.setSwapInterval(0)
@@ -62,6 +65,23 @@ Ax = np.zeros((Nz, Nx), dtype=dtype)
 Ax_1 = np.zeros((Nz, Nx), dtype=dtype)
 Az = np.zeros((Nz, Nx), dtype=dtype)
 Az_1 = np.zeros((Nz, Nx), dtype=dtype)
+
+v = np.zeros((Nz, Nx))
+v_1 = np. zeros((Nz, Nx))
+v_2 = np. zeros((Nz, Nx))
+
+# Laplacian Kernels Stencil Calculation - Prof. Dr. Pipa
+deriv_order = 2
+deriv_accuracy = 2
+deriv_n_coef = 2 * np.floor((deriv_order + 1) / 2).astype('int') - 1 + deriv_accuracy
+p = np.round((deriv_n_coef - 1) / 2).astype('int')
+A = np.arange(-p, p + 1) ** np.arange(0, 2 * p + 1)[None].T
+b = np.zeros(2 * p + 1)
+b[deriv_order] = math.factorial(deriv_order)
+lapcoeff = np.zeros((deriv_n_coef, deriv_n_coef))
+# Solve system A*w = b
+lapcoeff[deriv_n_coef // 2, :] = np.linalg.solve(A, b)
+lapcoeff += lapcoeff.T
 
 # px[Nz // 2, Nx // 2] = 1
 # pz[Nz // 2, Nx // 2] = 1
@@ -95,11 +115,16 @@ def coeff(N):
 
     return c
 
-d = coeff(10)[None]
+
+d = coeff(3)[None]
 d = np.hstack((-np.flip(d), d))
+
+print(d)
 
 for k in range(1, Nt):
     px_1, pz_1, Ax_1, Az_1 = px, pz, Ax, Az
+
+    v_1, v_2 = v.copy(), v_1.copy()
 
     # px[:,1:] = (1-dx[:,1:]*Dt)*px_1[:,1:] + c**2*(Dt/Dx)*(Ax_1[:,1:] - Ax_1[:, :-1])/2
     # pz[1:,:] = (1-dz[1:,:]*Dt)*pz_1[1:,:] + c**2*(Dt/Dx)*(Az_1[1:, :] - Az_1[:-1, :])/2
@@ -118,6 +143,12 @@ for k in range(1, Nt):
 
     px[Nz//2, Nx//2] += s[k]
     pz[Nz//2, Nx//2] += s[k]
+    p = px + pz
+
+    lap = correlate(v_1[:, :], lapcoeff)
+    v = 2 * v_1 - v_2 + C2 * lap
+
+    x = np.concatenate((p, v), 1)
 
     riw.setImage((px + pz).T, levels=[-.01, .01])
     app.processEvents()  ## force complete redraw for every plot
