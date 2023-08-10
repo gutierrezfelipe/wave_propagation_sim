@@ -65,8 +65,8 @@ def speed_measuring(z1, z2, pressure_at_z1, pressure_at_z2, dh, medium_speed, mo
 T = 0.000008  # [s]
 Lx = 0.02  # [m]
 Lz = 0.02  # [m]
-dt = 5e-9  # [s/iteration]
-dx = 10e-5  # [m/pixel]
+dt = 2.5e-9  # [s/iteration]
+dx = 5e-5  # [m/pixel]
 dz = dx  # [m/pixel]
 Nt = math.ceil(T / dt)
 Nx = math.ceil(Lx / dx)
@@ -127,7 +127,7 @@ coeff += coeff.T
 # print(str(np.size(coeff, 0)) + " x " + str((np.size(coeff, 1))))
 
 # Simulation Parameters
-delta = 3e-3
+delta = 0e-3
 z_f = round(Nz * 0)  # Transductor y coordinate
 x_f = round(Nx / 2)
 x_pois = x_f

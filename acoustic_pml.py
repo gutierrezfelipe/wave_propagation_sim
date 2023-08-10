@@ -82,11 +82,11 @@ class Window(QMainWindow):
 
 
 # Simulation Parameters
-T = 0.00001  # [s]
-Lx = 0.02  # [m]
-Lz = 0.02  # [m]
+T = 30e-6  # [s]
+Lx = 40e-3  # [m]
+Lz = 40e-3  # [m]
 dt = 5e-9  # [s/iteration]
-dx = 10e-5  # [m/pixel]
+dx = 3e-5  # [m/pixel]
 dz = dx  # [m/pixel]
 dh = dz  # [m/pixel]
 Nt = math.ceil(T / dt)
@@ -100,8 +100,8 @@ Nz = math.ceil(Lz / dz) + 2 * PML_size
 ad = math.sqrt((dx * dz) / (dt ** 2))  # Adimensionality constant
 
 #soundspeed = 1000  # [m/s]
-#soundspeed = 1481  # [m/s]
-soundspeed = 2500  # [m/s]
+soundspeed = 1480  # [m/s]
+#soundspeed = 2500  # [m/s]
 #soundspeed = 3000  # [m/s]
 #soundspeed = 5800  # [m/s]
 #soundspeed = 6000  # [m/s]
@@ -141,9 +141,9 @@ u_at_transducer = np.zeros(Nt)
 z_f = round(Nz * 0.5)  # Transductor z coordinate
 x_f = round(Nx / 2)  # Transcuctor x coordinate
 t = np.linspace(0, T - dt, Nt)  # Time array
-frequency = 2e6  # [Hz]
+frequency = 5e6  # [Hz]
 delay = 1e-6
-bandwidth = 0.6
+bandwidth = 0.9
 f = signal.gausspulse(t - delay, frequency, bandwidth)
 
 # Laplacian Kernels Stencil Calculation - Prof. Dr. Pipa
@@ -161,8 +161,8 @@ coeff += coeff.T
 
 # PML parameters
 Li = PML_size * dh
-R = 0.0000001
-Vmax = 2500
+R = 1e-7
+Vmax = soundspeed
 #d0 = -3 / (2 * Li) * math.log(R, 10)
 
 ones = np.ones((PML_size, Nx))
@@ -175,16 +175,17 @@ fade = np.linspace(Li, 0, PML_size)
 f_i_top = np.outer(fade, ones)
 f_i_left = f_i_top.T
 
-f_i = np.zeros((Nz, Nx))
-f_i[0:PML_size, :] += f_i_top[:, :Nx]
-f_i[Nz-PML_size:Nz, :] += f_i_bottom[:, :Nx]
-f_i[:, 0:PML_size] += f_i_left[:Nz, :]
-f_i[:, Nx-PML_size:Nx] += f_i_right[:Nz, :]
+f_ix = np.zeros((Nz, Nx))
+f_iz = np.zeros((Nz, Nx))
+f_iz[0:PML_size, :] += f_i_top[:, :Nx]
+f_iz[Nz-PML_size:Nz, :] += f_i_bottom[:, :Nx]
+f_ix[:, 0:PML_size] += f_i_left[:Nz, :]
+f_ix[:, Nx-PML_size:Nx] += f_i_right[:Nz, :]
 
 d_x = np.zeros((Nz, Nx))
 d_z = np.zeros((Nz, Nx))
-d_x = 3 * Vmax / (2 * Li) * (f_i/Li) ** 2 * math.log(1/R, 10)  # dx(x)
-d_z = 3 * Vmax / (2 * Li) * (f_i/Li) ** 2 * math.log(1/R, 10)  # dz(z)
+d_x = 3 * Vmax * np.log10(1 / R) / (2 * Li ** 3) * f_ix ** 2  # dx(x)
+d_z = 3 * Vmax * np.log10(1 / R) / (2 * Li ** 3) * f_iz ** 2  # dz(z)
 
 # Exhiibition Setup
 App = pg.QtWidgets.QApplication([])

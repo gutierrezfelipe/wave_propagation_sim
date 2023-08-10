@@ -114,7 +114,7 @@ def coeff2ndOrder(N):
 matplotlib.use('TkAgg')
 
 # Simulation Parameters
-T = 24e-3  # [s]
+T = 12e-3  # [s]
 Lx = 2.2  # [m]
 Lz = 2.2  # [m]
 dt = 3e-6  # [s/iteration]
@@ -133,7 +133,7 @@ ad = math.sqrt((dx * dz) / (dt ** 2))  # Adimensionality constant
 # media setup
 # soundspeed = 1000  # [m/s]
 # soundspeed = 1481  # [m/s]
-soundspeed = 1500  # [m/s]
+soundspeed = 1480  # [m/s]
 # soundspeed = 3000  # [m/s]
 # soundspeed = 5800  # [m/s]
 # soundspeed = 6000  # [m/s]
@@ -206,6 +206,7 @@ delay = 1.25e-3
 bandwidth = 0.6
 f = signal.gausspulse(t - delay, frequency, bandwidth)
 
+#f -= np.mean(f)
 source_integral = 0
 
 
@@ -235,8 +236,8 @@ d_x = 3 * Vmax / (2 * Li) * (f_i / Li) ** 2 * math.log(1 / R, 10)  # omega_x
 d_z = 3 * Vmax / (2 * Li) * (f_i / Li) ** 2 * math.log(1 / R, 10)  # omega_z
 
 # fading omega
-omega_x = np.zeros((Nz, Nx))
-omega_z = np.zeros((Nz, Nx))
+omega_x = 0.0001 * np.ones((Nz, Nx))
+omega_z = 0.0001 * np.ones((Nz, Nx))
 pixels = np.arange(0, PML_size)
 omega_max = soundspeed  # [?]
 p = 2
@@ -253,8 +254,11 @@ a_z = 1
 
 rho = 1200 * np.ones((Nz, Nx))  # [Kg/m³]
 # rho = np.ones((Nz, Nx))  # [Kg/m³]
-gamma = 2e-4  # [s/m²]
+gamma = 2e-3  # [s/m²]
 # gamma = 0  # [s/m²]
+# gamma = 2e-3*np.ones((Nz, Nx))
+#gamma[Nz//2, Nx//2] = 0
+
 
 D_xv = a_x/dt + (a_x * gamma * c ** 2 + omega_x)/2 + omega_x * gamma * c ** 2 * dt / 2
 D_zv = a_z/dt + (a_z * gamma * c ** 2 + omega_z)/2 + omega_z * gamma * c ** 2 * dt / 2
@@ -292,23 +296,44 @@ for k in range(1, Nt):
     px_1, pz_1, vx_1, vz_1 = px, pz, vx, vz
 
     # gao 2015
-
+    px = (1 - d_x * dt) * px_1 - c[:, :] ** 2 * (dt / dx) * correlate(vx_1, c1stOrd, mode='constant')
+    pz = (1 - d_z * dt) * pz_1 - c[:, :] ** 2 * (dt / dx) * correlate(vz_1, c1stOrd.T, mode='constant')
+    px[Nz // 2, Nx // 2] += f[k] / 2
+    pz[Nz // 2, Nx // 2] += f[k] / 2
+    vx = (1 - d_x * dt) * vx_1 - (dt / dx) * correlate(px + pz, c1stOrd, mode='constant', origin=[0, -1])
+    vz = (1 - d_z * dt) * vz_1 - (dt / dx) * correlate(px + pz, c1stOrd.T, mode='constant', origin=[-1, 0])
 
     # liu 1997
     # integrals
-    px_integral += px
-    pz_integral += pz
+    # px_integral += px
+    # pz_integral += pz
+    #
+    # source_integral += f[k]  # correction of unity
+    #
+    # px = f_3x * px_1 + f_4x * px_integral + f_5x * correlate(vx_1, c1stOrd, mode='constant')
+    # pz = f_3z * pz_1 + f_4z * pz_integral + f_5z * correlate(vz_1, c1stOrd.T, mode='constant')
+    #
+    # px[z_f, x_f] = f_6x[z_f, x_f] * source_integral / 2
+    # pz[z_f, x_f] = f_6z[z_f, x_f] * source_integral / 2
+    #
+    # # px[z_f, x_f] = source_integral / 2
+    # # pz[z_f, x_f] = source_integral / 2
+    #
+    #
+    # vx = f_1x * vx_1 + f_2x * correlate(px+pz, c1stOrd, mode='constant', origin=[0, -1])
+    # vz = f_1z * vz_1 + f_2z * correlate(px+pz, c1stOrd.T, mode='constant', origin=[-1, 0])
 
-    source_integral += f[k]
-
-    px = f_3x * px_1 + f_4x * px_integral + f_5x * correlate(vx_1, c1stOrd, mode='constant')
-    pz = f_3z * pz_1 + f_4z * pz_integral + f_5z * correlate(vz_1, c1stOrd.T, mode='constant')
-
-    px[z_f, x_f] += f_6x[z_f, x_f] * source_integral / 2
-    pz[z_f, x_f] += f_6z[z_f, x_f] * source_integral / 2
-
-    vx = f_1x * vx_1 + f_2x * correlate(px+pz, c1stOrd, mode='constant', origin=[0, -1])
-    vz = f_1z * vz_1 + f_2z * correlate(px+pz, c1stOrd.T, mode='constant', origin=[-1, 0])
+    # # liu1997 my FDM discretization - rho inside Ax, Az instead of vx, vz
+    # vx = (1 - omega_x * dt) * vx_1 - dt/dx * correlate(px + pz, c1stOrd, mode='constant', origin=[0, -1])
+    # vz = (1 - omega_z * dt) * vz_1 - dt/dz * correlate(px + pz, c1stOrd.T, mode='constant', origin=[-1, 0])
+    #
+    # px = (1 - (gamma * c**2 + omega_x) * dt) * px_1 + (omega_x * gamma * c ** 2 * dt) * px_integral - \
+    #      (c ** 2 * dt/dx) * correlate(vx_1, c1stOrd, mode='constant')
+    # pz = (1 - (gamma * c**2 + omega_z) * dt) * pz_1 + (omega_z * gamma * c ** 2 * dt) * pz_integral - \
+    #      (c ** 2 * dt/dz) * correlate(vz_1, c1stOrd.T, mode='constant')
+    #
+    # px[z_f, x_f] += a_x * dt * source_integral / 2
+    # pz[z_f, x_f] += a_x * dt * source_integral / 2
 
     # # without pml
     # p_1, p_2 = p, p_1
@@ -318,13 +343,10 @@ for k in range(1, Nt):
     # Signal Acquisition
     for i in range(n_sensors):
         sensors[i, k] = px[sensors_pos[0, i], sensors_pos[1, i]] + pz[sensors_pos[0, i], sensors_pos[1, i]]
-    #sensors[0, k] = px[z_f, x_f] + pz[z_f, x_f]
-    #sensors[1, k] = px[z_s, x_s] + pz[z_s, x_s]
 
     # debugging mid-sim
-    if k > 1500:
+    if k > 800:
         print(0)
-
 
 
     # Tracking
@@ -335,8 +357,9 @@ for k in range(1, Nt):
     # Exhibition Update - QT
     # x = np.concatenate(((px+pz), p), 1)
     # window.imv.setImage(x.T, levels=[-0.1, 0.1])
-    window.imv.setImage((px + pz).T, levels=[-5e-8, 5e-8])
+    window.imv.setImage((px + pz).T, levels=[-5e-7, 5e-7])
     # window.imv.setImage((px + pz).T, levels=[np.min(px + pz), np.max(px + pz)])
+    # window.imv.setImage((px + pz).T, levels=[0, 255])
     App.processEvents()
 
 App.exit()
