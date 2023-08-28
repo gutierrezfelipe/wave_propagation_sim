@@ -205,8 +205,6 @@ d0_x = 0.0
 d0_y = 0.0
 xval = 0.0
 yval = 0.0
-abscissa_in_PML = 0.0
-abscissa_normalized = 0.0
 
 # for source
 a = 0.0
@@ -284,11 +282,14 @@ xoriginright = (NX - 1) * DELTAX - thickness_PML_x
 # dampening profile in X direction at the grid points
 i = np.arange(NX)
 xval = DELTAX * i
-abscissa_in_PML = xoriginleft - xval
-abscissa_in_PML_mask = np.where(abscissa_in_PML < 0.0, False, True)
-abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask, np.flip(abscissa_in_PML_mask))
-abscissa_in_PML = np.where(abscissa_in_PML > 0, abscissa_in_PML, 0.0)
-abscissa_in_PML = abscissa_in_PML + np.flip(abscissa_in_PML)
+abscissa_in_PML_left = xoriginleft - xval
+abscissa_in_PML_right = xval - xoriginright
+abscissa_in_PML_mask_left = np.where(abscissa_in_PML_left < 0.0, False, True)
+abscissa_in_PML_mask_right = np.where(abscissa_in_PML_right < 0.0, False, True)
+abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask_left, abscissa_in_PML_mask_right)
+abscissa_in_PML = np.zeros(NX)
+abscissa_in_PML[abscissa_in_PML_mask_left] = abscissa_in_PML_left[abscissa_in_PML_mask_left]
+abscissa_in_PML[abscissa_in_PML_mask_right] = abscissa_in_PML_right[abscissa_in_PML_mask_right]
 abscissa_in_PML_x = np.zeros((NY, NX))
 abscissa_in_PML_x[:, :] = abscissa_in_PML
 abscissa_normalized = abscissa_in_PML_x / thickness_PML_x
@@ -297,11 +298,14 @@ K_x[:, :] = 1.0 + (K_MAX_PML - 1.0) * abscissa_normalized ** NPOWER
 alpha_x[:, :] = ALPHA_MAX_PML * (1.0 - np.where(abscissa_in_PML_mask, abscissa_normalized, 1.0))
 
 # dampening profile in X direction at half the grid points
-abscissa_in_PML = xoriginleft - (xval + DELTAX / 2.0)
-abscissa_in_PML_mask = np.where(abscissa_in_PML < 0.0, False, True)
-abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask, np.flip(abscissa_in_PML_mask))
-abscissa_in_PML = np.where(abscissa_in_PML > 0, abscissa_in_PML, 0.0)
-abscissa_in_PML = abscissa_in_PML + np.flip(abscissa_in_PML)
+abscissa_in_PML_left = xoriginleft - (xval + DELTAX / 2.0)
+abscissa_in_PML_right = (xval + DELTAX/2.0) - xoriginright
+abscissa_in_PML_mask_left = np.where(abscissa_in_PML_left < 0.0, False, True)
+abscissa_in_PML_mask_right = np.where(abscissa_in_PML_right < 0.0, False, True)
+abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask_left, abscissa_in_PML_mask_right)
+abscissa_in_PML = np.zeros(NX)
+abscissa_in_PML[abscissa_in_PML_mask_left] = abscissa_in_PML_left[abscissa_in_PML_mask_left]
+abscissa_in_PML[abscissa_in_PML_mask_right] = abscissa_in_PML_right[abscissa_in_PML_mask_right]
 abscissa_in_PML_x_half = np.zeros((NY, NX))
 abscissa_in_PML_x_half[:, :] = abscissa_in_PML
 abscissa_normalized = abscissa_in_PML_x_half / thickness_PML_x
@@ -333,28 +337,32 @@ yorigintop = (NY - 1) * DELTAY - thickness_PML_y
 # dampening profile in Y direction at the grid points
 j = np.arange(NY)
 yval = DELTAY * j
-abscissa_in_PML = yoriginbottom - yval
-abscissa_in_PML_mask = np.where(abscissa_in_PML < 0.0, False, True)
-abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask, np.flip(abscissa_in_PML_mask))
-abscissa_in_PML = np.where(abscissa_in_PML > 0, abscissa_in_PML, 0.0)
-abscissa_in_PML = abscissa_in_PML + np.flip(abscissa_in_PML)
+abscissa_in_PML_bottom = yoriginbottom - yval
+abscissa_in_PML_top = yval - yorigintop
+abscissa_in_PML_mask_bottom = np.where(abscissa_in_PML_bottom < 0.0, False, True)
+abscissa_in_PML_mask_top = np.where(abscissa_in_PML_top < 0.0, False, True)
+abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask_bottom, abscissa_in_PML_mask_top)
+abscissa_in_PML = np.zeros(NY)
+abscissa_in_PML[abscissa_in_PML_mask_bottom] = abscissa_in_PML_bottom[abscissa_in_PML_mask_bottom]
+abscissa_in_PML[abscissa_in_PML_mask_top] = abscissa_in_PML_top[abscissa_in_PML_mask_top]
 abscissa_in_PML_y = np.zeros((NY, NX))
-abscissa_in_PML_y[:, :] = abscissa_in_PML
-abscissa_in_PML_y = abscissa_in_PML_y.T
+abscissa_in_PML_y[:, :] = np.expand_dims(abscissa_in_PML, axis=1)
 abscissa_normalized = abscissa_in_PML_y / thickness_PML_y
 d_y[:, :] = d0_y * abscissa_normalized ** NPOWER
 K_y[:, :] = 1.0 + (K_MAX_PML - 1.0) * abscissa_normalized ** NPOWER
 alpha_y[:, :] = ALPHA_MAX_PML * (1.0 - np.where(abscissa_in_PML_mask, abscissa_normalized.T, 1.0)).T
 
 # dampening profile in X direction at half the grid points
-abscissa_in_PML = yoriginbottom - (yval + DELTAY / 2.0)
-abscissa_in_PML_mask = np.where(abscissa_in_PML < 0.0, False, True)
-abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask, np.flip(abscissa_in_PML_mask))
-abscissa_in_PML = np.where(abscissa_in_PML > 0, abscissa_in_PML, 0.0)
-abscissa_in_PML = abscissa_in_PML + np.flip(abscissa_in_PML)
+abscissa_in_PML_bottom = yoriginbottom - (yval + DELTAY / 2.0)
+abscissa_in_PML_top = (yval + DELTAX/2.0) - yorigintop
+abscissa_in_PML_mask_bottom = np.where(abscissa_in_PML_bottom < 0.0, False, True)
+abscissa_in_PML_mask_top = np.where(abscissa_in_PML_top < 0.0, False, True)
+abscissa_in_PML_mask = np.logical_or(abscissa_in_PML_mask_bottom, abscissa_in_PML_mask_top)
+abscissa_in_PML = np.zeros(NY)
+abscissa_in_PML[abscissa_in_PML_mask_bottom] = abscissa_in_PML_bottom[abscissa_in_PML_mask_bottom]
+abscissa_in_PML[abscissa_in_PML_mask_top] = abscissa_in_PML_top[abscissa_in_PML_mask_top]
 abscissa_in_PML_y_half = np.zeros((NY, NX))
-abscissa_in_PML_y_half[:, :] = abscissa_in_PML
-abscissa_in_PML_y_half = abscissa_in_PML_y_half.T
+abscissa_in_PML_y_half[:, :] = np.expand_dims(abscissa_in_PML, axis=1)
 abscissa_normalized = abscissa_in_PML_y_half / thickness_PML_y
 d_y_half[:, :] = d0_y * abscissa_normalized ** NPOWER
 K_y_half[:, :] = 1.0 + (K_MAX_PML - 1.0) * abscissa_normalized ** NPOWER
@@ -444,6 +452,7 @@ start_time = perf_counter()
 
 # beginning of time loop
 # Main loop
+# plt.figure()
 for it in range(1, NSTEP):
     # Compute the first spatial derivatives divided by density
     # for j in range(0, NY):
@@ -553,6 +562,10 @@ for it in range(1, NSTEP):
     for irec in range(0, NREC):
         sispressure[irec, it] = pressure_future[iy_rec[irec], ix_rec[irec]]
 
+    # if (it > 400) and (it % 15) == 0:
+    #     plt.plot(pressure_future[400, :])
+    #     plt.show()
+
     # print maximum of pressure and of norm of velocity
     pressurenorm = np.max(np.abs(pressure_future))
     print(f"Time step {it} out of {NSTEP}")
@@ -564,7 +577,8 @@ for it in range(1, NSTEP):
         print("code became unstable and blew up")
         exit(2)
 
-    window.imv.setImage(pressure_future.T, levels=[-0.5, 0.5])
+    window.imv.setImage(pressure_future.T, levels=[-1.0, 1.0])
+    # window.imv.setImage(np.log(pressure_future.T), levels=[-0.5, 0.5])
     App.processEvents()
 
     # move new values to old values (the present becomes the past, the future becomes the present)
